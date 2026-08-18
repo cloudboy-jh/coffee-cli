@@ -43,13 +43,13 @@ If Coffee is off, turn it on. If Coffee is on, turn it off.
 Expected output:
 
 ```text
-Coffee on
+☕ Brewing
 ```
 
 or:
 
 ```text
-Coffee off
+☕ Resting
 ```
 
 ### Explicit state changes
@@ -61,6 +61,18 @@ coffee off
 
 These commands must be idempotent. Running `coffee on` when it is already on should leave it on and return success. The same applies to `coffee off`.
 
+Expected output after `coffee on`, including when already active:
+
+```text
+☕ Brewing
+```
+
+Expected output after `coffee off`, including when already inactive:
+
+```text
+☕ Resting
+```
+
 ### Status
 
 ```bash
@@ -70,14 +82,18 @@ coffee status
 Expected output:
 
 ```text
-Coffee on
+☕ Brewing
 ```
 
 or:
 
 ```text
-Coffee off
+☕ Resting
 ```
+
+`☕ Brewing` means Coffee is active and a Coffee-owned `caffeinate` process is running.
+
+`☕ Resting` means Coffee is inactive and no Coffee-owned `caffeinate` process is running.
 
 ### Help and version
 
@@ -106,15 +122,15 @@ The initial implementation should not use `sudo pmset -a disablesleep 1`. Lid-cl
 
 ## State
 
-The first version may store the child PID in a small runtime state file, for example:
+The first version stores runtime state at:
 
 ```text
 ~/Library/Application Support/coffee/coffee.pid
 ```
 
-The state directory should be created on demand. If the state file points to a process that no longer exists, Coffee should treat the state as off and remove the stale file.
+The state file includes the Coffee-owned child PID, process command, and process start time so Coffee can guard against PID reuse before stopping a process.
 
-The exact state mechanism can change during implementation as long as these properties hold:
+The state directory should be created on demand. If the state file points to a process that no longer exists or no longer matches the recorded identity, Coffee should treat the state as off and remove the stale file.
 
 - `coffee status` reports the real running state.
 - `coffee off` does not kill unrelated processes.
@@ -126,6 +142,22 @@ The exact state mechanism can change during implementation as long as these prop
 - No third-party runtime dependencies.
 - Initial release targets Apple Silicon and Intel macOS through Go builds.
 
+## Installation
+
+The primary v1 installation path is Homebrew:
+
+```bash
+brew install --HEAD cloudboy-jh/tap/coffee
+```
+
+The formula name is `coffee`. The tap target is `cloudboy-jh/tap`.
+
+Stable Homebrew installation should be added after the first tagged release:
+
+```bash
+brew install cloudboy-jh/tap/coffee
+```
+
 ## Exit Codes
 
 - `0` — successful operation.
@@ -136,16 +168,16 @@ The exact state mechanism can change during implementation as long as these prop
 
 ```text
 $ coffee status
-Coffee off
+☕ Resting
 
 $ coffee
-Coffee on
+☕ Brewing
 
 $ coffee status
-Coffee on
+☕ Brewing
 
 $ coffee
-Coffee off
+☕ Resting
 ```
 
 ## Future Considerations
@@ -155,7 +187,6 @@ Possible follow-up features, only if the basic CLI proves useful:
 - `coffee for 1h` for timed activation.
 - `coffee run -- <command>` to keep the Mac awake while a command runs.
 - An explicit `--lid` mode backed by `pmset`, with clear privilege and safety warnings.
-- Homebrew installation and automated release binaries.
 
 ## Success Criteria
 
@@ -163,14 +194,6 @@ The v1 release is successful when a user can install one binary, run `coffee`, a
 
 The implementation should remain small, understandable, and boring.
 
-## Open Questions
-
-- Should `coffee` default to preventing only idle system sleep, or also keep the display awake?
-- Should the state file use a PID only, or include a process start-time check to guard against PID reuse?
-- Should output include a coffee emoji, or remain plain text for scripting and terminal compatibility?
-- What Homebrew tap or formula name should be used?
-  
-These questions should be resolved before implementation, not by expanding the v1 scope unnecessarily.
 
 ## License
 
@@ -178,6 +201,6 @@ To be decided before the first release.
 
 ## Status
 
-Specification only. No implementation yet.
+Implemented as a Go CLI with a Homebrew formula.
 
-Last updated: 2026-07-15
+Last updated: 2026-08-17
